@@ -34,7 +34,7 @@ export function MouseTracker() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       // ws.send(`MOVE:${JSON.stringify(pos())}`)
       const {x, y} = pos();
-      ws.send(`MOVE:${x};${y})}`)
+      ws.send(`MOVE:${x};${y}`)
     }
   })
 

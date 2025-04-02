@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::protocol::Message;
@@ -22,6 +20,7 @@ async fn main() -> Result<()> {
 }
 
 async fn handle_connection(stream: tokio::net::TcpStream) -> Result<()> {
+    let rustautogui = rustautogui::RustAutoGui::new(false).unwrap(); // arg: debug
     let mut ws = accept_async(stream).await?;
     while let Some(n) = ws.next().await {
         match n {
@@ -29,8 +28,8 @@ async fn handle_connection(stream: tokio::net::TcpStream) -> Result<()> {
             Ok(msg) => {
                 if msg.is_text() {
                     let received_text = msg.to_string();
-                    println!("Received message: {}", received_text);
-                    let res = process_message(&received_text);
+                    // println!("Received message: {}", received_text);
+                    let res = process_message(&received_text, &rustautogui);
                     let response = match res {
                         Ok(m) => m,
                         Err(m) => m
@@ -57,7 +56,7 @@ fn parse_command(input:&str) -> Result<Command, String> {
         return Ok(Command::Close())
     } 
     if input.starts_with("ECHO:") {
-        println!("echooooo");
+        // println!("echooooo");
         return Ok(Command::Echo(input[5..].to_string()))
     }
 
@@ -65,7 +64,7 @@ fn parse_command(input:&str) -> Result<Command, String> {
         let coords: Vec<i32> = input[5..]
             .split(";")
             .take(2)
-            .map(|s| s.parse::<i32>())
+            .map(|s|  s.parse::<i32>())
             .map(|n| n.unwrap_or(0))
             .collect()
         ;
@@ -76,22 +75,33 @@ fn parse_command(input:&str) -> Result<Command, String> {
     Err("unknown command".to_string())
 }
 
-fn process_message(input: &String) -> Result<String, String> {
+fn process_message(input: &String, rustautogui: &RustAutoGui) -> Result<String, String> {
     match parse_command(input) {
         Err(s) => Err(s),
-        Ok(cmd) => process_command(cmd)
+        Ok(cmd) => process_command(cmd, rustautogui)
     }
 }
 
-fn process_command(cmd: Command) -> Result<String, String> {
+fn process_command(cmd: Command, rustautogui: &RustAutoGui) -> Result<String, String> {
     match cmd {
         Command::Close() => Ok("BYE".to_string()),
         Command::Echo(content) => Ok(content),
-        Command::Move { x, y } => process_move(x,y)
+        Command::Move { x, y } => process_move(x,y, rustautogui)
     }
 }
 
-fn process_move(x: i32, y: i32) -> std::result::Result<String, String> {
-    println!("x: {}, y: {}", x, y);
+use rustautogui::{self, RustAutoGui};
+
+fn process_move(x: i32, y: i32, rustautogui: &RustAutoGui) -> std::result::Result<String, String> {
+    // println!("x: {}, y: {}", x, y);
+    
+    let (pre_x, pre_y) = rustautogui.get_mouse_position().unwrap();
+
+    let dest_x :u32 = u32::try_from(pre_x+x).unwrap_or(0);
+    let dest_y :u32 = u32::try_from(pre_y + y).unwrap_or(0);
+    // println!("prex: {}, prey: {}, destx: {}, desty: {}, x: {}, y: {}", pre_x, pre_y, dest_x, dest_y, x, y);
+
+    _ = rustautogui.move_mouse_to_pos(dest_x, dest_y, 0.0);
+
     return Ok("sdf".to_string());
 }

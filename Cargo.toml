@@ -9,3 +9,5 @@ tokio-stream = "0.1"
 tokio-tungstenite = "0.23.1"
 anyhow = "1.0"
 futures-util = "0.3"
+# rustautogui = "2.3.0"
+rustautogui  = { git = "https://github.com/DavorMar/rustautogui", branch = "2-4-0-features" }
