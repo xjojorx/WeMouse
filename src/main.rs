@@ -22,6 +22,7 @@ async fn main() -> Result<()> {
 async fn handle_connection(stream: tokio::net::TcpStream) -> Result<()> {
     let rustautogui = rustautogui::RustAutoGui::new(false).unwrap(); // arg: debug
     let mut ws = accept_async(stream).await?;
+    // let mut msg_count = 0;
     while let Some(n) = ws.next().await {
         match n {
             Err(_) => break,
@@ -30,6 +31,8 @@ async fn handle_connection(stream: tokio::net::TcpStream) -> Result<()> {
                     let received_text = msg.to_string();
                     // println!("Received message: {}", received_text);
                     let res = process_message(&received_text, &rustautogui);
+                    // println!("{}",msg_count);
+                    // msg_count += 1;
                     let response = match res {
                         Ok(m) => m,
                         Err(m) => m

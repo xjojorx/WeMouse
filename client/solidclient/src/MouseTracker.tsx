@@ -1,5 +1,20 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
 
+function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let lastCall = 0;
+  return function(this: any, ...args: Parameters<T>) { // Explicit 'this'
+    const now = Date.now();
+    if (now - lastCall < delay) {
+      return; // Ignore this call
+    }
+    lastCall = now;
+    func.apply(this, args);
+  };
+}
+
 export function MouseTracker() {
   const [pos, setPos] = createSignal({ x: 0, y: 0 });
   const [tracking, setTracking] = createSignal({ active: false, x: 0, y: 0 })
@@ -75,7 +90,8 @@ export function MouseTracker() {
     onMouseMove={onMouseMove}
     onMouseDown={startTracking}
     onMouseUp={stopTracking}
-    onTouchMove={onTouchMove}
+    // onTouchMove={onTouchMove}
+    onTouchMove={throttle(onTouchMove, 20)}
     onTouchStart={startTrackingTouch}
     onTouchEnd={stopTracking}
   >asdf</div>)
