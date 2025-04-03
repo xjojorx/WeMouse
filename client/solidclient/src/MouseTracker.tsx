@@ -15,7 +15,7 @@ function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-export function MouseTracker() {
+export function MouseTracker({speed}: {speed: () => number}) {
   const [pos, setPos] = createSignal({ x: 0, y: 0 });
   const [tracking, setTracking] = createSignal({ active: false, x: 0, y: 0 })
   let ws: WebSocket | undefined;
@@ -49,7 +49,7 @@ export function MouseTracker() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       // ws.send(`MOVE:${JSON.stringify(pos())}`)
       const {x, y} = pos();
-      ws.send(`MOVE:${x};${y}`)
+      ws.send(`MOVE:${Math.floor(x)};${Math.floor(y)}`)
     }
   })
 
@@ -61,7 +61,8 @@ export function MouseTracker() {
   const onMouseMove = (e: MouseEvent) => {
     const { active, x: prevX, y: prevY } = tracking();
     if (active) {
-      const moved = { x: e.offsetX - prevX, y: e.offsetY - prevY }
+      const s = speed();
+      const moved = { x: (e.offsetX - prevX) * s, y: (e.offsetY - prevY)*s }
       setTracking({ ...tracking(), x: e.offsetX, y: e.offsetY });
       setPos(moved)
     }
@@ -75,7 +76,10 @@ export function MouseTracker() {
     const { active, x: prevX, y: prevY } = tracking();
     if(active) {
       const touch = e.changedTouches[0];
-      const moved = { x: touch.clientX - prevX, y: touch.clientY - prevY }
+      const s = speed();
+      const x =(touch.clientX - prevX);
+      const y =(touch.clientY - prevY);
+      const moved = { x: x*s, y: y*s }
       setTracking({ ...tracking(), x: touch.clientX, y: touch.clientY });
       setPos(moved)
     }
@@ -86,7 +90,7 @@ export function MouseTracker() {
     setTracking({ ...tracking(), active: false });
   }
 
-  return (<div class="h-full w-full"
+  return (<div class="h-full w-full bg-neutral-100"
     onMouseMove={onMouseMove}
     onMouseDown={startTracking}
     onMouseUp={stopTracking}
@@ -94,5 +98,5 @@ export function MouseTracker() {
     onTouchMove={throttle(onTouchMove, 20)}
     onTouchStart={startTrackingTouch}
     onTouchEnd={stopTracking}
-  >asdf</div>)
+  >touch here</div>)
 }
