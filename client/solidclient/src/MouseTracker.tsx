@@ -21,7 +21,8 @@ export function MouseTracker({speed}: {speed: () => number}) {
   let ws: WebSocket | undefined;
 
   createEffect(() => {
-    ws = new WebSocket("ws://192.168.1.133:8080");
+    // ws = new WebSocket(`ws://localhost:8080/ws`);
+    ws = new WebSocket(`ws://${window.location.host}/ws`);
     ws.onopen = () => {
       console.log("open");
     }

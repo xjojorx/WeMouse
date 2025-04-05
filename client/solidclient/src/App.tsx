@@ -5,12 +5,17 @@ import styles from './App.module.css';
 import { MouseTracker } from './MouseTracker';
 
 const App: Component = () => {
-  const [speedMod, setSpeedMod] = createSignal(1)
+  const speed = Number(localStorage.getItem("speed") ?? "1")
+  const [speedMod, setSpeedMod] = createSignal(speed)
   const speedUp = () => {
-    setSpeedMod(Math.min(speedMod()+0.1, 10))
+    const newVal =Math.min(speedMod()+0.1, 10);
+    setSpeedMod(newVal)
+    localStorage.setItem("speed", newVal.toString())
   }
   const speedDown = () => {
-    setSpeedMod(Math.max(speedMod()-0.1, 0))
+    const newVal = Math.max(speedMod()-0.1, 0);
+    setSpeedMod(newVal)
+    localStorage.setItem("speed", newVal.toString())
   }
 
   return (
