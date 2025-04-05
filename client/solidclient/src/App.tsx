@@ -1,7 +1,5 @@
 import { createSignal, type Component } from 'solid-js';
 
-import logo from './logo.svg';
-import styles from './App.module.css';
 import { MouseTracker } from './MouseTracker';
 
 const App: Component = () => {
@@ -19,7 +17,7 @@ const App: Component = () => {
   }
 
   return (
-    <div class='h-screen w-screen flex flex-col'>
+    <div class='h-screen w-screen flex flex-col bg-zinc-800 text-gray-500'>
       <div class='flex w-full gap-2' >
         <button onClick={speedDown}>Slow</button>
         {speedMod().toString().substring(0,3)}
@@ -32,5 +30,6 @@ const App: Component = () => {
     </div>
   );
 };
+
 
 export default App;

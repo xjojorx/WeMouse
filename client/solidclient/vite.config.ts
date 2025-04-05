@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [solidPlugin(), tailwindcss()],
   server: {
     port: 3000,
+    watch: {
+      usePolling: false
+    }
   },
   build: {
     target: 'esnext',

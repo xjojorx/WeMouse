@@ -6,6 +6,7 @@ use futures_util::{SinkExt, StreamExt};
 use rust_embed::RustEmbed;
 use warp::{Filter, Reply, http::Response, http::StatusCode};
 use rustautogui::{self, MouseClick, RustAutoGui};
+use crate::Command::Media;
 
 // Embed the entire static directory
 #[derive(RustEmbed)]
@@ -93,7 +94,7 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
                 }
                 if msg.is_text() {
                     let received_text = msg.to_str().unwrap_or("").to_string();
-                    // println!("Received message: {}", received_text);
+                    println!("Received message: {}", received_text);
                     let res = process_message(&received_text);
                     // println!("{}",msg_count);
                     // msg_count += 1;
@@ -119,7 +120,19 @@ enum Command {
     Echo(String),
     Close,
     Move{x: i32, y: i32},
-    Click
+    Click,
+    Media(MediaOption)
+}
+
+#[derive(Debug)]
+enum MediaOption {
+    Play,
+    Pause,
+    Previous,
+    Next,
+    VolumeUp,
+    VolumeDown,
+    Mute,
 }
 
 fn parse_command(input:&str) -> Result<Command, String> {
@@ -146,8 +159,21 @@ fn parse_command(input:&str) -> Result<Command, String> {
     if  input == "CLICK" {
         return Ok(Command::Click)
     }
+    
+    if  input.starts_with("MEDIA:") {
+        return match input[6..].to_string().as_str() {
+            "play" => Ok(Media(MediaOption::Play)),
+            "pause" => Ok(Media(MediaOption::Pause)),
+            "previous" => Ok(Media(MediaOption::Previous)),
+            "next" => Ok(Media(MediaOption::Next)),
+            "volume_up" => Ok(Media(MediaOption::VolumeUp)),
+            "volume_down"=> Ok(Media(MediaOption::VolumeDown)),
+            "mute" => Ok(Media(MediaOption::Mute)),
+            opt => Err(format!("Unknown media option: '{opt}'"))
+        }
+    }
 
-    Err("unknown command".to_string())
+    Err(format!("unknown command: '{input}'"))
 }
 
 fn process_message(input: &String) -> Result<String, String> {
@@ -167,10 +193,10 @@ fn process_command(cmd: Command, rustautogui: &RustAutoGui) -> Result<String, St
         Command::Click => {
             let _ = rustautogui.click(MouseClick::LEFT);
             Ok("clicked!".to_string())
-        }
+        },
+        Command::Media(media) => handle_media(media, rustautogui),
     }
 }
-
 
 fn process_move(x: i32, y: i32, rustautogui: &RustAutoGui) -> std::result::Result<String, String> {
     // println!("x: {}, y: {}", x, y);
@@ -186,7 +212,34 @@ fn process_move(x: i32, y: i32, rustautogui: &RustAutoGui) -> std::result::Resul
     return Ok("moved!".to_string());
 }
 
+fn handle_media(media: MediaOption, rustautogui: &RustAutoGui) -> Result<String, String> {
+    //check: https://github.com/DavorMar/rustautogui/blob/main/Keyboard_commands.md
+    let command : &str = match media {
+        MediaOption::Play => "playpause",
+        MediaOption::Pause => "pause",
+        MediaOption::Previous => "prevtrack",
+        MediaOption::Next => "nexttrack",
+        MediaOption::VolumeUp => "volumeup",
+        MediaOption::VolumeDown => "volumedown",
+        MediaOption::Mute => "volumemute",
+    };
+    
+    let res = rustautogui.keyboard_command(command);
+    if  let Err(error) = res {
+        let str_err = error.to_string();
+        eprintln!("{}",str_err);
+        return Err(str_err);
+    }
+    
+    return  Ok(command.to_string());
+}
 
+
+
+
+
+
+//serve client
 fn serve_embedded_file(path: &str) -> impl Reply {
     match StaticFiles::get(path) {
         Some(content) => {

@@ -1,4 +1,7 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
+import { Pause, Play, SkipBack, SkipForward, SkipForwardIcon, Volume1, Volume2, VolumeX } from 'lucide-solid';
+
+type MediaOptions = "play" | "pause" |"previous" |"next" |"volume_up"| "volume_down"|"mute";
 
 function throttle<T extends (...args: any[]) => any>(
   func: T,
@@ -15,7 +18,7 @@ function throttle<T extends (...args: any[]) => any>(
   };
 }
 
-export function MouseTracker({speed}: {speed: () => number}) {
+export function MouseTracker({ speed }: { speed: () => number }) {
   const [pos, setPos] = createSignal({ x: 0, y: 0 });
   const [tracking, setTracking] = createSignal({ active: false, x: 0, y: 0 })
   let ws: WebSocket | undefined;
@@ -49,7 +52,7 @@ export function MouseTracker({speed}: {speed: () => number}) {
     console.log(pos())
     if (ws && ws.readyState === WebSocket.OPEN) {
       // ws.send(`MOVE:${JSON.stringify(pos())}`)
-      const {x, y} = pos();
+      const { x, y } = pos();
       ws.send(`MOVE:${Math.floor(x)};${Math.floor(y)}`)
     }
   })
@@ -63,7 +66,7 @@ export function MouseTracker({speed}: {speed: () => number}) {
     const { active, x: prevX, y: prevY } = tracking();
     if (active) {
       const s = speed();
-      const moved = { x: (e.offsetX - prevX) * s, y: (e.offsetY - prevY)*s }
+      const moved = { x: (e.offsetX - prevX) * s, y: (e.offsetY - prevY) * s }
       setTracking({ ...tracking(), x: e.offsetX, y: e.offsetY });
       setPos(moved)
     }
@@ -75,12 +78,12 @@ export function MouseTracker({speed}: {speed: () => number}) {
   }
   const onTouchMove = (e: TouchEvent) => {
     const { active, x: prevX, y: prevY } = tracking();
-    if(active) {
+    if (active) {
       const touch = e.changedTouches[0];
       const s = speed();
-      const x =(touch.clientX - prevX);
-      const y =(touch.clientY - prevY);
-      const moved = { x: x*s, y: y*s }
+      const x = (touch.clientX - prevX);
+      const y = (touch.clientY - prevY);
+      const moved = { x: x * s, y: y * s }
       setTracking({ ...tracking(), x: touch.clientX, y: touch.clientY });
       setPos(moved)
     }
@@ -92,19 +95,53 @@ export function MouseTracker({speed}: {speed: () => number}) {
   }
 
   const clicked = () => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(`CLICK`)
-      }
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(`CLICK`)
+    }
   }
 
-  return (<div class="h-full w-full bg-neutral-100"
-    onMouseMove={onMouseMove}
-    onMouseDown={startTracking}
-    onMouseUp={stopTracking}
-    // onTouchMove={onTouchMove}
-    onTouchMove={throttle(onTouchMove, 20)}
-    onTouchStart={startTrackingTouch}
-    onTouchEnd={stopTracking}
-    onClick={() => tracking().active ? stopTracking() : clicked() }
-  >touch here</div>)
+  const mediaClicked = (mediaBtn : MediaOptions) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(`MEDIA:${mediaBtn}`);
+    }
+
+  }
+
+  return (
+    <div class="h-full w-full flex flex-col">
+      <div class="flex items-center py-1 gap-2 px-2" >
+        <div onClick={() => mediaClicked("previous")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+          <SkipBack />
+        </div>
+        <div onClick={() => mediaClicked("play")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+          <Play />
+        </div>
+        <div onClick={() => mediaClicked("pause")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+          <Pause />
+        </div>
+        <div onClick={() => mediaClicked("next")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+          <SkipForward />
+        </div>
+        <div onClick={() => mediaClicked("volume_down")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+          <Volume1/>
+        </div>
+        <div onClick={() => mediaClicked("volume_up")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+          <Volume2/>
+        </div>
+        <div onClick={() => mediaClicked("mute")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+          <VolumeX />
+        </div>
+
+      </div>
+      <div class="grow w-full  bg-black text-gray-400"
+        onMouseMove={throttle(onMouseMove, 20)}
+        onMouseDown={startTracking}
+        onMouseUp={stopTracking}
+        // onTouchMove={onTouchMove}
+        onTouchMove={throttle(onTouchMove, 20)}
+        onTouchStart={startTrackingTouch}
+        onTouchEnd={stopTracking}
+        onClick={() => tracking().active ? stopTracking() : clicked()}
+      >touch here</div>
+    </div>)
 }
