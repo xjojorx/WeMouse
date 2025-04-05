@@ -5,7 +5,7 @@ use std::str::FromStr;
 use futures_util::{SinkExt, StreamExt};
 use rust_embed::RustEmbed;
 use warp::{Filter, Reply, http::Response, http::StatusCode};
-use rustautogui::{self, RustAutoGui};
+use rustautogui::{self, MouseClick, RustAutoGui};
 
 // Embed the entire static directory
 #[derive(RustEmbed)]
@@ -30,14 +30,11 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     
     // Parse the IP address
-    let ip_addr = match IpAddr::from_str(&args.host) {
-        Ok(ip) => ip,
-        Err(e) => {
-            eprintln!("Invalid IP address: {}", e);
-            eprintln!("Using default: 127.0.0.1");
-            IpAddr::from_str("127.0.0.1").unwrap()
-        }
-    };
+    let ip_addr = IpAddr::from_str(&args.host).unwrap_or_else(|e| {
+        eprintln!("Invalid IP address: {}", e);
+        eprintln!("Using default: 127.0.0.1");
+        IpAddr::from_str("127.0.0.1").unwrap()
+    });
 
     //routes
     let ws_route = warp::path("ws")
@@ -83,7 +80,6 @@ fn format_addr(host: IpAddr, port: u16) -> String {
 }
 
 async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
-    let rustautogui = rustautogui::RustAutoGui::new(false).unwrap(); // arg: debug
     // Handle the WebSocket connection
     println!("WebSocket connection established");
     let (mut tx, mut rx) = websocket.split();
@@ -98,13 +94,10 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
                 if msg.is_text() {
                     let received_text = msg.to_str().unwrap_or("").to_string();
                     // println!("Received message: {}", received_text);
-                    let res = process_message(&received_text, &rustautogui);
+                    let res = process_message(&received_text);
                     // println!("{}",msg_count);
                     // msg_count += 1;
-                    let response = match res {
-                        Ok(m) => m,
-                        Err(m) => m
-                    };
+                    let response = res.unwrap_or_else(|m| m);
                     if let Err(e) = tx.send(warp::ws::Message::text(response)).await {
                         eprintln!("WebSocket send error: {}", e);
                         break;
@@ -124,13 +117,14 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
 #[derive(Debug)]
 enum Command {
     Echo(String),
-    Close(),
+    Close,
     Move{x: i32, y: i32},
+    Click
 }
 
 fn parse_command(input:&str) -> Result<Command, String> {
     if input == "CLOSE" {
-        return Ok(Command::Close())
+        return Ok(Command::Close)
     } 
     if input.starts_with("ECHO:") {
         // println!("echooooo");
@@ -148,22 +142,32 @@ fn parse_command(input:&str) -> Result<Command, String> {
 
         return Ok(Command::Move{x :coords[0], y :coords[1]})
     }
+    
+    if  input == "CLICK" {
+        return Ok(Command::Click)
+    }
 
     Err("unknown command".to_string())
 }
 
-fn process_message(input: &String, rustautogui: &RustAutoGui) -> Result<String, String> {
+fn process_message(input: &String) -> Result<String, String> {
+
+    let rustautogui = rustautogui::RustAutoGui::new(false).unwrap(); // arg: debug
     match parse_command(input) {
         Err(s) => Err(s),
-        Ok(cmd) => process_command(cmd, rustautogui)
+        Ok(cmd) => process_command(cmd, &rustautogui)
     }
 }
 
 fn process_command(cmd: Command, rustautogui: &RustAutoGui) -> Result<String, String> {
     match cmd {
-        Command::Close() => Ok("BYE".to_string()),
+        Command::Close => Ok("BYE".to_string()),
         Command::Echo(content) => Ok(content),
-        Command::Move { x, y } => process_move(x,y, rustautogui)
+        Command::Move { x, y } => process_move(x,y, rustautogui),
+        Command::Click => {
+            let _ = rustautogui.click(MouseClick::LEFT);
+            Ok("clicked!".to_string())
+        }
     }
 }
 

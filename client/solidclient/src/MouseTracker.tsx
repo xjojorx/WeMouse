@@ -91,6 +91,12 @@ export function MouseTracker({speed}: {speed: () => number}) {
     setTracking({ ...tracking(), active: false });
   }
 
+  const clicked = () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(`CLICK`)
+      }
+  }
+
   return (<div class="h-full w-full bg-neutral-100"
     onMouseMove={onMouseMove}
     onMouseDown={startTracking}
@@ -99,5 +105,6 @@ export function MouseTracker({speed}: {speed: () => number}) {
     onTouchMove={throttle(onTouchMove, 20)}
     onTouchStart={startTrackingTouch}
     onTouchEnd={stopTracking}
+    onClick={() => tracking().active ? stopTracking() : clicked() }
   >touch here</div>)
 }

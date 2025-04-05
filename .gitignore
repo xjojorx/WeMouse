@@ -1,1 +1,5 @@
 /target
+.idea
+static/index.css
+static/index.html
+static/index.js
