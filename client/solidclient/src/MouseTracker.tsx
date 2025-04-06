@@ -110,30 +110,30 @@ export function MouseTracker({ speed }: { speed: () => number }) {
   return (
     <div class="h-full w-full flex flex-col">
       <div class="flex items-center py-1 gap-2 px-2" >
-        <div onClick={() => mediaClicked("previous")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+        <div onClick={() => mediaClicked("previous")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <SkipBack />
         </div>
-        <div onClick={() => mediaClicked("play")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+        <div onClick={() => mediaClicked("play")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <Play />
         </div>
-        <div onClick={() => mediaClicked("pause")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+        <div onClick={() => mediaClicked("pause")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <Pause />
         </div>
-        <div onClick={() => mediaClicked("next")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+        <div onClick={() => mediaClicked("next")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <SkipForward />
         </div>
-        <div onClick={() => mediaClicked("volume_down")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+        <div onClick={() => mediaClicked("volume_down")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <Volume1/>
         </div>
-        <div onClick={() => mediaClicked("volume_up")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+        <div onClick={() => mediaClicked("volume_up")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <Volume2/>
         </div>
-        <div onClick={() => mediaClicked("mute")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center">
+        <div onClick={() => mediaClicked("mute")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <VolumeX />
         </div>
 
       </div>
-      <div class="grow w-full  bg-black text-gray-400"
+      <div class="grow w-full  bg-black text-gray-400 select-none"
         onMouseMove={throttle(onMouseMove, 20)}
         onMouseDown={startTracking}
         onMouseUp={stopTracking}
