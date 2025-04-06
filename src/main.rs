@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::sync::{Arc, Mutex};
 use enigo::{Enigo, Keyboard, Settings, Key, Mouse, Coordinate, Button};
 use enigo::Direction::Click;
 use futures_util::{SinkExt, StreamExt};
@@ -88,6 +89,7 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
     let (mut tx, mut rx) = websocket.split();
 
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
+    let safe_enigo = Arc::new(Mutex::new(Enigo::new(&Settings::default()).unwrap()));
 
     // Echo all messages back
     while let Some(result) = rx.next().await {
@@ -99,7 +101,8 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
                 if msg.is_text() {
                     let received_text = msg.to_str().unwrap_or("").to_string();
                     println!("Received message: {}", received_text);
-                    let res = process_message(&received_text, &mut  enigo);
+                    // let res = process_message(&received_text, &mut  enigo);
+                    let res = process_message(&received_text, &safe_enigo);
                     // println!("{}",msg_count);
                     // msg_count += 1;
                     let response = res.unwrap_or_else(|m| m);
@@ -180,10 +183,11 @@ fn parse_command(input:&str) -> Result<Command, String> {
     Err(format!("unknown command: '{input}'"))
 }
 
-fn process_message(input: &String, enigo: &mut Enigo) -> Result<String, String> {
+fn process_message(input: &String, enigo: &Arc<Mutex<Enigo>> /*enigo: &mut Enigo*/) -> Result<String, String> {
+    let mut enigo_guard = enigo.lock().unwrap();
     match parse_command(input) {
         Err(s) => Err(s),
-        Ok(cmd) => process_command(cmd, enigo)
+        Ok(cmd) => process_command(cmd, &mut  *enigo_guard)
     }
 }
 
