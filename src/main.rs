@@ -2,11 +2,13 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::IpAddr;
 use std::str::FromStr;
+use enigo::{Enigo, Keyboard, Settings, Key, Mouse, Coordinate, Button};
+use enigo::Direction::Click;
 use futures_util::{SinkExt, StreamExt};
 use rust_embed::RustEmbed;
 use warp::{Filter, Reply, http::Response, http::StatusCode};
-use rustautogui::{self, MouseClick, RustAutoGui};
 use crate::Command::Media;
+
 
 // Embed the entire static directory
 #[derive(RustEmbed)]
@@ -85,6 +87,8 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
     println!("WebSocket connection established");
     let (mut tx, mut rx) = websocket.split();
 
+    let mut enigo = Enigo::new(&Settings::default()).unwrap();
+
     // Echo all messages back
     while let Some(result) = rx.next().await {
         match result {
@@ -95,7 +99,7 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
                 if msg.is_text() {
                     let received_text = msg.to_str().unwrap_or("").to_string();
                     println!("Received message: {}", received_text);
-                    let res = process_message(&received_text);
+                    let res = process_message(&received_text, &mut  enigo);
                     // println!("{}",msg_count);
                     // msg_count += 1;
                     let response = res.unwrap_or_else(|m| m);
@@ -176,64 +180,64 @@ fn parse_command(input:&str) -> Result<Command, String> {
     Err(format!("unknown command: '{input}'"))
 }
 
-fn process_message(input: &String) -> Result<String, String> {
-
-    let rustautogui = rustautogui::RustAutoGui::new(false).unwrap(); // arg: debug
+fn process_message(input: &String, enigo: &mut Enigo) -> Result<String, String> {
     match parse_command(input) {
         Err(s) => Err(s),
-        Ok(cmd) => process_command(cmd, &rustautogui)
+        Ok(cmd) => process_command(cmd, enigo)
     }
 }
 
-fn process_command(cmd: Command, rustautogui: &RustAutoGui) -> Result<String, String> {
+fn process_command(cmd: Command, enigo: &mut Enigo) -> Result<String, String> {
     match cmd {
         Command::Close => Ok("BYE".to_string()),
         Command::Echo(content) => Ok(content),
-        Command::Move { x, y } => process_move(x,y, rustautogui),
+        Command::Move { x, y } => process_move(x,y, enigo),
         Command::Click => {
-            let _ = rustautogui.click(MouseClick::LEFT);
-            Ok("clicked!".to_string())
+            enigo.button(Button::Left, Click)
+                .map(|_| "clicked!".to_string())
+                .map_err(|error| error.to_string())
         },
-        Command::Media(media) => handle_media(media, rustautogui),
+        Media(media) => handle_media(media, enigo),
     }
 }
 
-fn process_move(x: i32, y: i32, rustautogui: &RustAutoGui) -> std::result::Result<String, String> {
+fn process_move(x: i32, y: i32, enigo: &mut Enigo) -> std::result::Result<String, String> {
     // println!("x: {}, y: {}", x, y);
 
-    let (pre_x, pre_y) = rustautogui.get_mouse_position().unwrap();
+    // let (pre_x, pre_y) = rustautogui.get_mouse_position().unwrap();
 
-    let dest_x :u32 = u32::try_from(pre_x+x).unwrap_or(0);
-    let dest_y :u32 = u32::try_from(pre_y + y).unwrap_or(0);
+    // let dest_x :u32 = u32::try_from(pre_x+x).unwrap_or(0);
+    // let dest_y :u32 = u32::try_from(pre_y + y).unwrap_or(0);
     // println!("prex: {}, prey: {}, destx: {}, desty: {}, x: {}, y: {}", pre_x, pre_y, dest_x, dest_y, x, y);
 
-    _ = rustautogui.move_mouse_to_pos(dest_x, dest_y, 0.0);
-
-    return Ok("moved!".to_string());
+    let res = enigo.move_mouse(x, y, Coordinate::Rel)
+        .map(|_| "moved!".to_string())
+        .map_err( |error| error.to_string());
+    
+    res
 }
 
-fn handle_media(media: MediaOption, rustautogui: &RustAutoGui) -> Result<String, String> {
-    //check: https://github.com/DavorMar/rustautogui/blob/main/Keyboard_commands.md
-    let command : &str = match media {
-        MediaOption::Play => "playpause",
-        MediaOption::Pause => "pause",
-        MediaOption::Previous => "prevtrack",
-        MediaOption::Next => "nexttrack",
-        MediaOption::VolumeUp => "volumeup",
-        MediaOption::VolumeDown => "volumedown",
-        MediaOption::Mute => "volumemute",
-    };
-    
-    let res = rustautogui.keyboard_command(command);
+fn handle_media(media: MediaOption, enigo: &mut Enigo) -> Result<String, String> {
+    let key = match media {
+        MediaOption::Play => Key::MediaPlayPause,
+        MediaOption::Pause => Key::MediaPlayPause,
+        MediaOption::Previous => Key::MediaPrevTrack,
+        MediaOption::Next => Key::MediaNextTrack,
+        MediaOption::VolumeUp => Key::VolumeUp,
+        MediaOption::VolumeDown => Key::VolumeDown,
+        MediaOption::Mute => Key::VolumeMute,
+    }; 
+    // let res = enigo.key(Key::MediaPlayPause, Click);
+    let res = enigo.key(key, Click);
+
     if  let Err(error) = res {
         let str_err = error.to_string();
         eprintln!("{}",str_err);
         return Err(str_err);
     }
     
-    return  Ok(command.to_string());
+    Ok("pressed!".to_string())
 }
-
 
 
 

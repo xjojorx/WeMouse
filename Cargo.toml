@@ -10,9 +10,11 @@ tokio = { version = "1.12", features = ["full"] }
 anyhow = "1.0"
 futures-util = "0.3"
 # rustautogui = "2.3.0"
-rustautogui  = { git = "https://github.com/DavorMar/rustautogui", branch = "2-4-0-features" }
+rustautogui  = { git = "https://github.com/DavorMar/rustautogui"}
 rust-embed = "8.6.0"
 # hyper = { version = "1.6.0", features = ["full"] }
 mime_guess = "2.0.5"
 warp = "0.3.7"
 clap = { version = "4.5.35", features = ["derive"] }
+winapi = { version = "0.3.9" , features = ["winuser", "wincon", "minwindef"]}
+enigo = "0.3.0"
