@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::IpAddr;
 use std::str::FromStr;
-// use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use enigo::{Enigo, Keyboard, Settings, Key, Mouse, Coordinate, Button};
@@ -90,10 +89,8 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
     println!("WebSocket connection established");
     let (mut tx, mut rx) = websocket.split();
 
-    // let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    // let safe_enigo = Arc::new(Mutex::new(Enigo::new(&Settings::default()).unwrap()));
+    //enigo is not Send, use a thread for it and communicate through a channel
     let (enigo_sender, enigo_recv) = channel::<Command>();
-    
     thread::spawn(move ||{
         enigo_thread(enigo_recv);
     });
@@ -108,8 +105,6 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
                 if msg.is_text() {
                     let received_text = msg.to_str().unwrap_or("").to_string();
                     println!("Received message: {}", received_text);
-                    // let res = process_message(&received_text, &mut  enigo);
-                    // let res = process_message(&received_text, &safe_enigo);
                     let res = process_message(&received_text, &enigo_sender);
                     // println!("{}",msg_count);
                     // msg_count += 1;
@@ -192,10 +187,8 @@ fn parse_command(input:&str) -> Result<Command, String> {
 }
 
 fn process_message(input: &String, enigo_sender: &Sender<Command>) -> Result<String, String> {
-    // let mut enigo_guard = enigo.lock().unwrap();
     match parse_command(input) {
         Err(s) => Err(s),
-        // Ok(cmd) => process_command(cmd, &mut  *enigo_guard)
         Ok(cmd) => enigo_sender.send(cmd).map(|_| "ok".to_string()).map_err(|_| "error".to_string() )
     }
 }
@@ -207,7 +200,6 @@ fn enigo_thread(rx: Receiver<Command>){
         let _ = process_command(msg, &mut  enigo);
         
     }
-    
 }
 
 fn process_command(cmd: Command, enigo: &mut Enigo) -> Result<String, String> {
@@ -250,7 +242,6 @@ fn handle_media(media: MediaOption, enigo: &mut Enigo) -> Result<String, String>
         MediaOption::VolumeDown => Key::VolumeDown,
         MediaOption::Mute => Key::VolumeMute,
     }; 
-    // let res = enigo.key(Key::MediaPlayPause, Click);
     let res = enigo.key(key, Click);
 
     if  let Err(error) = res {
