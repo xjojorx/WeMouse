@@ -2,7 +2,9 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+// use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
 use enigo::{Enigo, Keyboard, Settings, Key, Mouse, Coordinate, Button};
 use enigo::Direction::Click;
 use futures_util::{SinkExt, StreamExt};
@@ -88,8 +90,13 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
     println!("WebSocket connection established");
     let (mut tx, mut rx) = websocket.split();
 
-    let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    let safe_enigo = Arc::new(Mutex::new(Enigo::new(&Settings::default()).unwrap()));
+    // let mut enigo = Enigo::new(&Settings::default()).unwrap();
+    // let safe_enigo = Arc::new(Mutex::new(Enigo::new(&Settings::default()).unwrap()));
+    let (enigo_sender, enigo_recv) = channel::<Command>();
+    
+    thread::spawn(move ||{
+        enigo_thread(enigo_recv);
+    });
 
     // Echo all messages back
     while let Some(result) = rx.next().await {
@@ -102,7 +109,8 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
                     let received_text = msg.to_str().unwrap_or("").to_string();
                     println!("Received message: {}", received_text);
                     // let res = process_message(&received_text, &mut  enigo);
-                    let res = process_message(&received_text, &safe_enigo);
+                    // let res = process_message(&received_text, &safe_enigo);
+                    let res = process_message(&received_text, &enigo_sender);
                     // println!("{}",msg_count);
                     // msg_count += 1;
                     let response = res.unwrap_or_else(|m| m);
@@ -183,12 +191,23 @@ fn parse_command(input:&str) -> Result<Command, String> {
     Err(format!("unknown command: '{input}'"))
 }
 
-fn process_message(input: &String, enigo: &Arc<Mutex<Enigo>> /*enigo: &mut Enigo*/) -> Result<String, String> {
-    let mut enigo_guard = enigo.lock().unwrap();
+fn process_message(input: &String, enigo_sender: &Sender<Command>) -> Result<String, String> {
+    // let mut enigo_guard = enigo.lock().unwrap();
     match parse_command(input) {
         Err(s) => Err(s),
-        Ok(cmd) => process_command(cmd, &mut  *enigo_guard)
+        // Ok(cmd) => process_command(cmd, &mut  *enigo_guard)
+        Ok(cmd) => enigo_sender.send(cmd).map(|_| "ok".to_string()).map_err(|_| "error".to_string() )
     }
+}
+
+fn enigo_thread(rx: Receiver<Command>){
+    let mut enigo = Enigo::new(&Settings::default()).unwrap();
+
+    while let Ok(msg) = rx.recv() {
+        let _ = process_command(msg, &mut  enigo);
+        
+    }
+    
 }
 
 fn process_command(cmd: Command, enigo: &mut Enigo) -> Result<String, String> {
