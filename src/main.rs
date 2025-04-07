@@ -104,7 +104,7 @@ async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
                 }
                 if msg.is_text() {
                     let received_text = msg.to_str().unwrap_or("").to_string();
-                    println!("Received message: {}", received_text);
+                    // println!("Received message: {}", received_text);
                     let res = process_message(&received_text, &enigo_sender);
                     // println!("{}",msg_count);
                     // msg_count += 1;
