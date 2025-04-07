@@ -131,7 +131,8 @@ enum Command {
     Close,
     Move{x: i32, y: i32},
     Click,
-    Media(MediaOption)
+    Media(MediaOption),
+    Key(Key),
 }
 
 #[derive(Debug)]
@@ -183,6 +184,14 @@ fn parse_command(input:&str) -> Result<Command, String> {
         }
     }
 
+    if input.starts_with("KEY:") {
+        return match input.chars().skip(4).next() {
+            Option::Some(c) => Ok(Command::Key(Key::Unicode(c))),
+            None => Err(format!("no character found for KEY command '{input}'"))
+        }
+
+    }
+
     Err(format!("unknown command: '{input}'"))
 }
 
@@ -213,6 +222,11 @@ fn process_command(cmd: Command, enigo: &mut Enigo) -> Result<String, String> {
                 .map_err(|error| error.to_string())
         },
         Media(media) => handle_media(media, enigo),
+        Command::Key(k) => {
+            enigo.key(k, Click)
+                .map(|_| "pressed!".to_string())
+                .map_err(|error| error.to_string())
+        }
     }
 }
 

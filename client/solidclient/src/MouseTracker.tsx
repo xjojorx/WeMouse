@@ -1,5 +1,5 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
-import { Pause, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-solid';
+import { Keyboard, Pause, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-solid';
 
 type MediaOptions = "play" | "pause" |"previous" |"next" |"volume_up"| "volume_down"|"mute";
 
@@ -107,6 +107,25 @@ export function MouseTracker({ speed }: { speed: () => number }) {
 
   }
 
+  let inputRef: HTMLInputElement | undefined;
+  const showKeyboard= () => {
+    if(inputRef) {
+      inputRef.focus()
+    }
+  }
+  const keyPress = (e: KeyboardEvent) => {
+    e.preventDefault();
+    const key = e.key;
+    //NOTE: mobile typing is generally slow so sending a message on every event shouldn't be an issue
+    //if it performance issues come up, buffer the keypresses and send them in a rate-limited way
+    //e.g. send the characters pressed each 20ms interval, look into throttle for ideas on how
+    //waiting for a debounce-like interaction would not really be desirable for a remote-controller behaviour
+    //the keys pressed should appear on the server machine as soon as possible
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(`KEY:${key}`);
+    }
+  }
+
   return (
     <div class="h-full w-full flex flex-col">
       <div class="flex items-center py-1 gap-2 px-2" >
@@ -130,6 +149,18 @@ export function MouseTracker({ speed }: { speed: () => number }) {
         </div>
         <div onClick={() => mediaClicked("mute")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <VolumeX />
+        </div>
+        {/*keyboard*/}
+
+        <div onClick={() => showKeyboard()} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200 relative">
+          <Keyboard />
+          <input
+            ref={(r) => inputRef = r}
+            type="text"
+            onKeyDown={keyPress}
+            class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            autocomplete="off"
+          />
         </div>
 
       </div>
