@@ -1,5 +1,5 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
-import { Pause, Play, SkipBack, SkipForward, SkipForwardIcon, Volume1, Volume2, VolumeX } from 'lucide-solid';
+import { Pause, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-solid';
 
 type MediaOptions = "play" | "pause" |"previous" |"next" |"volume_up"| "volume_down"|"mute";
 
