@@ -185,10 +185,17 @@ fn parse_command(input:&str) -> Result<Command, String> {
     }
 
     if input.starts_with("KEY:") {
-        return match input.chars().skip(4).next() {
-            Option::Some(c) => Ok(Command::Key(Key::Unicode(c))),
-            None => Err(format!("no character found for KEY command '{input}'"))
-        }
+        // println!("{}", input);
+        let key_part = &input[4..];
+        // println!("{}", key_part);
+
+        return match key_part {
+            "Enter" => Ok(Command::Key(Key::Return)),
+            "Backspace" => Ok(Command::Key(Key::Backspace)),
+            s if s.len() == 1 => Ok(Command::Key(Key::Unicode(s.chars().next().unwrap()))),
+            "" => Err(format!("no character found for KEY command '{input}'")),
+            _ => Err(format!("no appropiate key found for KEY: '{key_part}'")),
+        };
 
     }
 
