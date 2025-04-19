@@ -1,7 +1,8 @@
-import { createEffect, createSignal, onCleanup } from "solid-js"
-import { Keyboard, Pause, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-solid';
+import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js"
+import { Keyboard, Pause, Play, RefreshCcw, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-solid';
 
-type MediaOptions = "play" | "pause" |"previous" |"next" |"volume_up"| "volume_down"|"mute";
+type MediaOptions = "play" | "pause" | "previous" | "next" | "volume_up" | "volume_down" | "mute";
+type ConnectionStatus = "connected" | "connecting" | "disconnected" | "error";
 
 function throttle<T extends (...args: any[]) => any>(
   func: T,
@@ -21,25 +22,42 @@ function throttle<T extends (...args: any[]) => any>(
 export function MouseTracker({ speed }: { speed: () => number }) {
   const [pos, setPos] = createSignal({ x: 0, y: 0 });
   const [tracking, setTracking] = createSignal({ active: false, x: 0, y: 0 })
+  const [connStatus, setConnStatus] = createSignal<ConnectionStatus>("disconnected");
   let ws: WebSocket | undefined;
 
-  createEffect(() => {
+  const connectWS = () => {
+    setConnStatus("connecting");
     // ws = new WebSocket(`ws://localhost:8080/ws`);
     ws = new WebSocket(`ws://${window.location.host}/ws`);
     ws.onopen = () => {
       console.log("open");
+      setConnStatus("connected");
     }
     ws.onclose = () => {
       console.log("close");
+      setConnStatus("disconnected");
     }
 
     ws.onerror = () => {
       console.log("error");
+      setConnStatus("error");
     }
     ws.onmessage = (e) => {
       const receivedMessage = e.data;
       console.log('Received message from server:', receivedMessage);
     }
+  }
+
+  const reconnectWS = () => {
+    if (connStatus() === "connecting") {
+      return;
+    }
+    ws?.close();
+    connectWS();
+  }
+
+  createEffect(() => {
+    connectWS();
     onCleanup(() => {
       // Clean up WebSocket connection
       if (ws) {
@@ -100,7 +118,7 @@ export function MouseTracker({ speed }: { speed: () => number }) {
     }
   }
 
-  const mediaClicked = (mediaBtn : MediaOptions) => {
+  const mediaClicked = (mediaBtn: MediaOptions) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(`MEDIA:${mediaBtn}`);
     }
@@ -108,8 +126,8 @@ export function MouseTracker({ speed }: { speed: () => number }) {
   }
 
   let inputRef: HTMLInputElement | undefined;
-  const showKeyboard= () => {
-    if(inputRef) {
+  const showKeyboard = () => {
+    if (inputRef) {
       inputRef.focus()
     }
   }
@@ -128,6 +146,7 @@ export function MouseTracker({ speed }: { speed: () => number }) {
 
   return (
     <div class="h-full w-full flex flex-col">
+      <ConnectionStatus status={connStatus} />
       <div class="flex items-center py-1 gap-2 px-2" >
         <div onClick={() => mediaClicked("previous")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <SkipBack />
@@ -142,10 +161,10 @@ export function MouseTracker({ speed }: { speed: () => number }) {
           <SkipForward />
         </div>
         <div onClick={() => mediaClicked("volume_down")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
-          <Volume1/>
+          <Volume1 />
         </div>
         <div onClick={() => mediaClicked("volume_up")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
-          <Volume2/>
+          <Volume2 />
         </div>
         <div onClick={() => mediaClicked("mute")} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
           <VolumeX />
@@ -163,6 +182,12 @@ export function MouseTracker({ speed }: { speed: () => number }) {
           />
         </div>
 
+        <Show when={connStatus() !== "connected" && connStatus() !== "connecting"}>
+          <div onClick={() => reconnectWS()} class="border rounded-sm border-slate-500 p-1 flex items-center justify-center active:bg-slate-200">
+            <RefreshCcw />
+          </div>
+        </Show>
+
       </div>
       <div class="grow w-full  bg-black text-gray-400 select-none"
         onMouseMove={throttle(onMouseMove, 20)}
@@ -175,4 +200,41 @@ export function MouseTracker({ speed }: { speed: () => number }) {
         onClick={() => tracking().active ? stopTracking() : clicked()}
       >touch here</div>
     </div>)
+}
+
+function ConnectionStatus({ status }: { status: () => ConnectionStatus }) {
+  const getColorClass = () => {
+    let className = "bg-gray-100";
+    switch (status()) {
+      case "connected":
+        className = "bg-green-300"
+        break;
+      case "connecting":
+        className = "bg-white"
+        break;
+      case "disconnected":
+        className = "bg-gray-200"
+        break;
+      case "error":
+        className = "bg-red-500"
+        break;
+    }
+    return className;
+  }
+  return (
+    <div class="absolute right-1 top-1 flex gap-1 text-sm items-center justify-end">
+      <Switch>
+        <Match when={status() === "error"}>
+          <span>Error</span>
+        </Match>
+        <Match when={status() === "connecting"}>
+          <span>Connecting</span>
+        </Match>
+        <Match when={status() === "disconnected"}>
+          <span>Disconnected</span>
+        </Match>
+      </Switch>
+      <div class={`rounded-full w-2 h-2 ${getColorClass()}`} />
+    </div>
+  );
 }

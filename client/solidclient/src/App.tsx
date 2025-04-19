@@ -18,7 +18,7 @@ const App: Component = () => {
 
   return (
     <div class='h-screen w-screen flex flex-col bg-zinc-800 text-gray-500'>
-      <div class='flex w-full gap-2' >
+      <div class='flex w-full gap-2 py-0.5' >
         <button onClick={speedDown}>Slow</button>
         {speedMod().toString().substring(0,3)}
         <button onClick={speedUp}>Fast</button>
