@@ -36,7 +36,7 @@ WeMouse is distributed as a single file executable.
 
 ### Binary releases
 
-Coming soon (when I figure out Github releases)
+You can download a binary release from GitHub [here](../../releases).
 
 ### Building from source
 
