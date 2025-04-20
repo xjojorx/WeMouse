@@ -1,7 +1,8 @@
 [package]
-name = "websocket_server"
-version = "0.1.0"
+name = "wemouse"
+version = "0.2.0"
 edition = "2021"
+license = "BSD 3-clause"
 
 [dependencies]
 tokio = { version = "1.12", features = ["full"] }
