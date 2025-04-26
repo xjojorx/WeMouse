@@ -18,3 +18,5 @@ warp = "0.3.7"
 clap = { version = "4.5.35", features = ["derive"] }
 #winapi = { version = "0.3.9" , features = ["winuser", "wincon", "minwindef"]}
 enigo = "0.3.0"
+local-ip-address = "0.6.3"
+qr2term = "0.3.3"

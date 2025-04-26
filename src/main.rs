@@ -21,7 +21,7 @@ struct StaticFiles;
 #[clap(author, version, about)]
 struct Args {
     /// Host address to bind to
-    #[clap(short = 'H', long = "host", default_value = "127.0.0.1")]
+    #[clap(short = 'H', long = "host", default_value = "0.0.0.0")]
     host: String,
 
     /// Port to listen on
@@ -33,7 +33,7 @@ struct Args {
 async fn main() -> Result<()> {
     // Parse command-line arguments
     let args = Args::parse();
-    
+
     // Parse the IP address
     let ip_addr = IpAddr::from_str(&args.host).unwrap_or_else(|e| {
         eprintln!("Invalid IP address: {}", e);
@@ -66,6 +66,9 @@ async fn main() -> Result<()> {
     print!("Server start on: ");
     let addr_text = format_addr(ip_addr, args.port);
     print_clickable_url(&addr_text, Some(&addr_text));
+
+    print_access(ip_addr, args.port);
+
     warp::serve(routes).run(addr).await;
 
 
@@ -75,13 +78,27 @@ async fn main() -> Result<()> {
 fn print_clickable_url(url: &str, text: Option<&str>) {
     // The display text defaults to the URL if not provided
     let display_text = text.unwrap_or(url);
-    
+
     // OSC 8 escape sequence format for hyperlinks
     // \x1B]8;;URL\x07TEXT\x1B]8;;\x07
     println!("\x1B]8;;{}\x07{}\x1B]8;;\x07", url, display_text);
 }
 fn format_addr(host: IpAddr, port: u16) -> String {
-    format!("{}:{}", host, port)
+    format!("http://{}:{}", host, port)
+}
+
+fn print_access(host: IpAddr, port: u16) {
+    if host.is_unspecified() {
+        print_access(local_ip().unwrap(), port);
+    } else {
+        print_ip(host, port);
+    }
+}
+use local_ip_address::local_ip;
+fn print_ip(host: IpAddr, port: u16){
+    let url = format_addr(host, port);
+    print_clickable_url(&url, None);
+    qr2term::print_qr(url).unwrap();
 }
 
 async fn handle_websocket_connection(websocket: warp::ws::WebSocket) {
@@ -166,11 +183,11 @@ fn parse_command(input:&str) -> Result<Command, String> {
 
         return Ok(Command::Move{x :coords[0], y :coords[1]})
     }
-    
+
     if  input == "CLICK" {
         return Ok(Command::Click)
     }
-    
+
     if  input.starts_with("MEDIA:") {
         return match input[6..].to_string().as_str() {
             "play" => Ok(Media(MediaOption::Play)),
@@ -214,7 +231,7 @@ fn enigo_thread(rx: Receiver<Command>){
 
     while let Ok(msg) = rx.recv() {
         let _ = process_command(msg, &mut  enigo);
-        
+
     }
 }
 
@@ -249,7 +266,7 @@ fn process_move(x: i32, y: i32, enigo: &mut Enigo) -> std::result::Result<String
     let res = enigo.move_mouse(x, y, Coordinate::Rel)
         .map(|_| "moved!".to_string())
         .map_err( |error| error.to_string());
-    
+
     res
 }
 
@@ -270,7 +287,7 @@ fn handle_media(media: MediaOption, enigo: &mut Enigo) -> Result<String, String>
         eprintln!("{}",str_err);
         return Err(str_err);
     }
-    
+
     Ok("pressed!".to_string())
 }
 
@@ -284,7 +301,7 @@ fn serve_embedded_file(path: &str) -> impl Reply {
         Some(content) => {
             // Guess the MIME type based on the file extension
             let mime = mime_guess::from_path(path).first_or_octet_stream();
-            
+
             Response::builder()
                 .header("content-type", mime.as_ref())
                 .body(content.data.to_vec())
