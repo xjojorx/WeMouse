@@ -11,10 +11,14 @@ Windows, Linux and MacOS are supported.
 Run the server on any IP:
 
 ``` bash
-wemouse -H 0.0.0.0
+wemouse 
 ```
 
-It is possible to use a specific IP address by changing the supplied IP on the `-H` flag, for example `wemouse -H 192.168.1.133`
+It is possible to use a specific IP address by changing the supplied IP on the `-H` flag. Changing the port is done with the flag `-p`, for example:
+
+``` bash
+wemouse -H 192.168.1.133 -p 8080
+```
 
 ### Accessing the UI
 
